@@ -2,15 +2,14 @@ import streamlit as st
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+import seaborn as sns
+import os
 from matplotlib.backends.backend_agg import RendererAgg
 from firebase_admin import credentials
 from firebase_admin import firestore
 import firebase_admin
 import numpy as np
 import matplotlib.pyplot as plt
-
-
-st.title('Feedback Channel of SPAVIS')
 
 credpath = {
     "type": "service_account",
@@ -29,76 +28,83 @@ if not firebase_admin._apps:
     login = credentials.Certificate(credpath)
     default_app = firebase_admin.initialize_app(login)
 
-db = firestore.client()
-feedbacks = db.collection("feedbacks").stream()
-topics = db.collection("topics").stream()
 
-# Printing all the sentences
-sentences = []
-for feedback in feedbacks:
-    feedbackOnly = feedback.to_dict()
-    sentences.append(feedbackOnly)
-st.header('Feedback List')
-st.dataframe(sentences)
+st.title('Feedback Channel of SPAVIS')
 
+tab1, tab2 = st.tabs(["Concerns", "Physical Volunteer"])
 
-every_topics = []
-for topic in topics:
-    topicOnly = topic.to_dict()
-    every_topics.append(topicOnly)
-st.header('Topic List')
-st.dataframe(every_topics)
+with tab1:
 
+    db = firestore.client()
+    feedbacks = db.collection("feedbacks").stream()
+    topics = db.collection("topics").stream()
 
-# Number of Positive Feedbacks
-pos_feedback = []
-aspect = db.collection("feedbacks").where(
-    u"sentiment", u"==", u"Positive").stream()
-for doc in aspect:
-    aspects = doc.to_dict()
-    pos_feedback.append(aspects)
+    # Printing all the feedbacks
+    sentences = []
+    for feedback in feedbacks:
+        feedbackOnly = feedback.to_dict()
+        sentences.append(feedbackOnly)
+    st.header('Feedback List')
+    st.dataframe(sentences)
 
-pos_aspect_count = len(pos_feedback)
+    every_topics = []
+    for topic in topics:
+        topicOnly = topic.to_dict()
+        every_topics.append(topicOnly)
+    st.header('Topic List')
+    st.dataframe(every_topics)
 
-# Number of Negative Feedbacks
-neg_feedback = []
-aspect = db.collection("feedbacks").where(
-    u"sentiment", u"==", u"Negative").stream()
-for doc in aspect:
-    aspects = doc.to_dict()
-    neg_feedback.append(aspects)
+    # Number of Positive Feedbacks
+    pos_feedback = []
+    aspect = db.collection("feedbacks").where(
+        "sentiment", u"==", u"Positive").stream()
+    for doc in aspect:
+        aspects = doc.to_dict()
+        pos_feedback.append(aspects)
 
-neg_aspect_count = len(neg_feedback)
+    pos_aspect_count = len(pos_feedback)
 
-# Sum of feedbacks given upon the volunteer related aspect
-# volunteer_aspect_feedback = []
-# volunteer_aspect_count = db.collection("feedbacks").where(
-#     u'aspect', u'array_contains_any', [u'volunteer', u'volunteer service', u'physical volunteer']).stream()
-# for doc in volunteer_aspect_count:
-#     aspects_to_doc = doc.to_dict()
-#     volunteer_aspect_feedback.append(aspects_to_doc)
-# volunteer_feedback_count = len(volunteer_aspect_feedback)
-# st.markdown(volunteer_feedback_count)
-# st.markdown(volunteer_aspect_feedback)
+    # Number of Negative Feedbacks
+    neg_feedback = []
+    aspect = db.collection("feedbacks").where(
+        u"sentiment", u"==", u"Negative").stream()
+    for doc in aspect:
+        aspects = doc.to_dict()
+        neg_feedback.append(aspects)
 
+    neg_aspect_count = len(neg_feedback)
 
-st.header('Total Positive and Negative Feedback')
+    st.header('Total Positive and Negative Feedback')
 
-# Pie chart, where the slices will be ordered and plotted counter-clockwise:
-labels = 'Positive', 'Negative'
-sizes = [pos_aspect_count, neg_aspect_count]
-explode = (0.1, 0)  # only "explode" the 2nd slice (i.e. 'Hogs')
+    # Pie chart, where the slices will be ordered and plotted counter-clockwise:
+    labels = 'Positive', 'Negative'
+    sizes = [pos_aspect_count, neg_aspect_count]
+    explode = (0.1, 0)  # only "explode" the 2nd slice (i.e. 'Hogs')
 
-fig1, ax1 = plt.subplots()
-ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
-        shadow=True, startangle=90, radius=800)
-ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    fig1, ax1 = plt.subplots()
+    ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
+            shadow=True, startangle=90, radius=800)
+    # Equal aspect ratio ensures that pie is drawn as a circle.
+    ax1.axis('equal')
+    st.pyplot(fig1)
 
-st.pyplot(fig1)
+with tab2:
 
+    filteredVolunteer = db.collection("filteredVolunteer").stream()
+    users = db.collection("users").stream()
 
-# query = db.collection("feedbacks").where(
-#     u'aspect', u'==', u'volunteer').stream()
-# for doc in query:
-#     count = doc.size
-# st.markdown(count)
+    # Printing the optimal volunteers
+    everyVolunteer = []
+    for volunteer in users:
+        volunteerOnly = volunteer.to_dict()
+        everyVolunteer.append(volunteerOnly)
+    st.header('Volunteer List')
+    st.dataframe(everyVolunteer)
+
+    # Printing users
+    optimalVolunteer = []
+    for volunteer in filteredVolunteer:
+        volunteerOnly = volunteer.to_dict()
+        optimalVolunteer.append(volunteerOnly)
+    st.header('Filtered Volunteer List')
+    st.dataframe(optimalVolunteer)
